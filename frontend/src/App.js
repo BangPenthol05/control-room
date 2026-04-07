@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Login from '@/components/Login';
+import Layout from '@/components/Layout';
 import Dashboard from '@/components/Dashboard';
 import AlarmHistory from '@/components/AlarmHistory';
 import AuditLogs from '@/components/AuditLogs';
 import UserManagement from '@/components/UserManagement';
-import Navbar from '@/components/Navbar';
+import SensorManagement from '@/components/SensorManagement';
+import AlarmSettings from '@/components/AlarmSettings';
+import SystemSettings from '@/components/SystemSettings';
+import Profile from '@/components/Profile';
 import '@/App.css';
 
 function App() {
@@ -43,20 +47,25 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="App min-h-screen bg-gray-50">
+      <div className="App">
         {user ? (
-          <>
-            <Navbar user={user} onLogout={handleLogout} />
+          <Layout user={user} onLogout={handleLogout}>
             <Routes>
               <Route path="/dashboard" element={<Dashboard user={user} />} />
               <Route path="/alarms" element={<AlarmHistory user={user} />} />
               <Route path="/audit-logs" element={<AuditLogs user={user} />} />
+              <Route path="/sensor-management" element={<SensorManagement user={user} />} />
+              <Route path="/alarm-settings" element={<AlarmSettings user={user} />} />
+              <Route path="/profile" element={<Profile user={user} />} />
               {user.role === 'admin' && (
-                <Route path="/users" element={<UserManagement user={user} />} />
+                <>
+                  <Route path="/users" element={<UserManagement user={user} />} />
+                  <Route path="/system-settings" element={<SystemSettings user={user} />} />
+                </>
               )}
               <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
-          </>
+          </Layout>
         ) : (
           <Routes>
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
