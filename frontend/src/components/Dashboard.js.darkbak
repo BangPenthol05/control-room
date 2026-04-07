@@ -149,8 +149,8 @@ export default function Dashboard({ user }) {
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Control Room Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Real-time sensor monitoring and control</p>
+            <h1 className="text-3xl font-bold text-gray-900">Control Room Dashboard</h1>
+            <p className="text-gray-600 mt-1">Real-time sensor monitoring and control</p>
           </div>
           <button
             onClick={() => setShowCharts(!showCharts)}
@@ -189,49 +189,49 @@ export default function Dashboard({ user }) {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-testid="total-sensors-card">
+        <div className="bg-white rounded-lg shadow p-6" data-testid="total-sensors-card">
           <div className="flex items-center">
             <div className="bg-blue-100 rounded-lg p-3">
               <Activity className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Sensors</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{sensors.length}</p>
+              <p className="text-sm font-medium text-gray-600">Total Sensors</p>
+              <p className="text-2xl font-bold text-gray-900">{sensors.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-testid="active-sensors-card">
+        <div className="bg-white rounded-lg shadow p-6" data-testid="active-sensors-card">
           <div className="flex items-center">
             <div className="bg-green-100 rounded-lg p-3">
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Active</p>
+              <p className="text-sm font-medium text-gray-600">Active</p>
               <p className="text-2xl font-bold text-green-600">{activeSensors}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-testid="inactive-sensors-card">
+        <div className="bg-white rounded-lg shadow p-6" data-testid="inactive-sensors-card">
           <div className="flex items-center">
             <div className="bg-gray-100 rounded-lg p-3">
-              <XCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+              <XCircle className="w-6 h-6 text-gray-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Inactive</p>
-              <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{inactiveSensors}</p>
+              <p className="text-sm font-medium text-gray-600">Inactive</p>
+              <p className="text-2xl font-bold text-gray-600">{inactiveSensors}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-testid="alarms-card">
+        <div className="bg-white rounded-lg shadow p-6" data-testid="alarms-card">
           <div className="flex items-center">
             <div className="bg-red-100 rounded-lg p-3">
               <Bell className="w-6 h-6 text-red-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">In Alarm</p>
+              <p className="text-sm font-medium text-gray-600">In Alarm</p>
               <p className="text-2xl font-bold text-red-600">{sensorsInAlarm}</p>
             </div>
           </div>
@@ -242,8 +242,8 @@ export default function Dashboard({ user }) {
       {showCharts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Sensor Status Distribution */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Activity className="w-5 h-5 mr-2" />
               Sensor Status Distribution
             </h3>
@@ -269,8 +269,8 @@ export default function Dashboard({ user }) {
           </div>
 
           {/* Alarm Duration Trend */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <TrendingUp className="w-5 h-5 mr-2" />
               Recent Alarm Durations
             </h3>
@@ -288,11 +288,11 @@ export default function Dashboard({ user }) {
       )}
 
       {/* Global Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8" data-testid="global-controls">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Global Controls</h2>
+      <div className="bg-white rounded-lg shadow p-6 mb-8" data-testid="global-controls">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Global Controls</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Enable/Disable All</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Enable/Disable All</label>
             <div className="flex space-x-3">
               <button
                 onClick={() => handleGlobalEnableDisable(true)}
@@ -311,7 +311,7 @@ export default function Dashboard({ user }) {
             </div>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Global Volume: {globalVolume}%
             </label>
             <div className="flex items-center space-x-4">
@@ -337,7 +337,7 @@ export default function Dashboard({ user }) {
 
       {/* Sensor Grid */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Sensor Status</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Sensor Status</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sensors.map((sensor) => (
             <SensorCard

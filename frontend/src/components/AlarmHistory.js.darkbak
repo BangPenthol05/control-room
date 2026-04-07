@@ -67,15 +67,15 @@ export default function AlarmHistory({ user }) {
   return (
     <div className="p-6" data-testid="alarm-history-container">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center">
           <Bell className="w-8 h-8 mr-3 text-red-600" />
           Alarm History
         </h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">View and manage alarm events</p>
+        <p className="text-gray-600 mt-1">View and manage alarm events</p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 flex items-center">
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
           <Filter className="w-4 h-4 mr-2" />
           Filter by Status
         </label>
@@ -86,7 +86,7 @@ export default function AlarmHistory({ user }) {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filterStatus === 'all'
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 dark:text-gray-200 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             All ({alarms.length})
@@ -97,7 +97,7 @@ export default function AlarmHistory({ user }) {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filterStatus === 'active'
                 ? 'bg-red-600 text-white'
-                : 'bg-gray-100 text-gray-700 dark:text-gray-200 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Active
@@ -108,7 +108,7 @@ export default function AlarmHistory({ user }) {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filterStatus === 'resolved'
                 ? 'bg-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 dark:text-gray-200 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Resolved
@@ -116,35 +116,35 @@ export default function AlarmHistory({ user }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200" data-testid="alarm-table">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Sensor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Location
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Triggered At
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Duration
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {alarms.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                     No alarms found
                   </td>
                 </tr>
@@ -152,19 +152,19 @@ export default function AlarmHistory({ user }) {
                 alarms.map((alarm) => (
                   <tr key={alarm.id} data-testid={`alarm-row-${alarm.id}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{alarm.sensor_name}</div>
+                      <div className="text-sm font-medium text-gray-900">{alarm.sensor_name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-300">{alarm.sensor_location}</div>
+                      <div className="text-sm text-gray-600">{alarm.sensor_location}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white flex items-center">
+                      <div className="text-sm text-gray-900 flex items-center">
                         <Clock className="w-4 h-4 mr-1 text-gray-400" />
                         {format(new Date(alarm.triggered_at), 'MMM dd, yyyy HH:mm:ss')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
+                      <div className="text-sm text-gray-900">
                         {alarm.status === 'active' ? (
                           <span className="text-red-600 font-medium animate-pulse">Ongoing</span>
                         ) : (

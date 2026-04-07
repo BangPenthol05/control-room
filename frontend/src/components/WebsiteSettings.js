@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Palette, Save, RotateCcw, Globe, Sparkles } from 'lucide-react';
+import { Palette, Save, RotateCcw, Globe, Sparkles, Moon } from 'lucide-react';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
 export default function WebsiteSettings({ user }) {
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [settings, setSettings] = useState({
     // Meta Settings
     siteTitle: 'IoT Alarm System',
@@ -40,6 +42,7 @@ export default function WebsiteSettings({ user }) {
   const handleSave = (e) => {
     e.preventDefault();
     localStorage.setItem('websiteSettings', JSON.stringify(settings));
+    toggleDarkMode(settings.enableDarkMode);
     applyTheme();
     setSuccessMessage('Website settings saved successfully');
     setTimeout(() => setSuccessMessage(''), 3000);
@@ -248,20 +251,25 @@ export default function WebsiteSettings({ user }) {
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Advanced Options</h2>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">Dark Mode</p>
-                  <p className="text-sm text-gray-600">Enable dark theme (Coming Soon)</p>
+                  <p className="font-medium text-gray-900 dark:text-white flex items-center">
+                    <Moon className="w-4 h-4 mr-2" />
+                    Dark Mode
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Enable dark theme for the entire application</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    disabled
                     checked={settings.enableDarkMode}
-                    onChange={(e) => setSettings({ ...settings, enableDarkMode: e.target.checked })}
+                    onChange={(e) => {
+                      setSettings({ ...settings, enableDarkMode: e.target.checked });
+                      toggleDarkMode(e.target.checked);
+                    }}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
 

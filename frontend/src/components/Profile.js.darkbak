@@ -3,12 +3,12 @@ export default function Profile({ user }) {
     <div className="p-6" data-testid="profile-container">
       <div className="max-w-4xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">View and manage your account information</p>
+          <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+          <p className="text-gray-600 mt-1">View and manage your account information</p>
         </div>
 
         {/* Profile Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-start space-x-6">
             {/* Avatar */}
             <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-lg">
@@ -17,17 +17,17 @@ export default function Profile({ user }) {
 
             {/* User Info */}
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{user.username}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">{user.username}</h2>
               <div className="flex items-center space-x-2 mb-4">
                 <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
                   user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
                 }`}>
                   {user.role === 'admin' ? 'Administrator' : 'Operator'}
                 </span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">•</span>
+                <span className="text-sm text-gray-500">•</span>
                 <span className="text-sm text-green-600 font-medium">Active</span>
               </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
+              <p className="text-gray-600 mb-4">
                 {user.role === 'admin' 
                   ? 'Full system access with administrative privileges'
                   : 'Monitoring and control access to alarm system'
@@ -38,35 +38,35 @@ export default function Profile({ user }) {
         </div>
 
         {/* Account Details */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Account Details</h3>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Details</h3>
           <div className="space-y-3">
             <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">User ID</span>
-              <span className="text-sm text-gray-900 dark:text-white font-mono">{user.id}</span>
+              <span className="text-sm font-medium text-gray-700">User ID</span>
+              <span className="text-sm text-gray-900 font-mono">{user.id}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Username</span>
-              <span className="text-sm text-gray-900 dark:text-white">{user.username}</span>
+              <span className="text-sm font-medium text-gray-700">Username</span>
+              <span className="text-sm text-gray-900">{user.username}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Role</span>
-              <span className="text-sm text-gray-900 dark:text-white capitalize">{user.role}</span>
+              <span className="text-sm font-medium text-gray-700">Role</span>
+              <span className="text-sm text-gray-900 capitalize">{user.role}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Account Created</span>
-              <span className="text-sm text-gray-900 dark:text-white">{new Date(user.created_at).toLocaleString()}</span>
+              <span className="text-sm font-medium text-gray-700">Account Created</span>
+              <span className="text-sm text-gray-900">{new Date(user.created_at).toLocaleString()}</span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Account Status</span>
+              <span className="text-sm font-medium text-gray-700">Account Status</span>
               <span className="text-sm text-green-600 font-semibold">Active</span>
             </div>
           </div>
         </div>
 
         {/* Permissions */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Permissions</h3>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Permissions</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <PermissionItem allowed={true} text="Monitor sensor status" />
             <PermissionItem allowed={true} text="Control sensors" />
@@ -102,7 +102,7 @@ function PermissionItem({ allowed, text }) {
           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
         </svg>
       )}
-      <span className={`text-sm ${allowed ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
+      <span className={`text-sm ${allowed ? 'text-gray-900' : 'text-gray-400'}`}>
         {text}
       </span>
     </div>
