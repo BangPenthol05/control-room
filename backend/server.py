@@ -69,6 +69,7 @@ class Sensor(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     location: str
+    esp8266_mac: Optional[str] = None  # ESP8266 MAC address
     status: str = "closed"  # open, closed, alarm
     current_volume: int = 50  # 0-100
     is_enabled: bool = True
@@ -78,12 +79,14 @@ class Sensor(BaseModel):
 class SensorCreate(BaseModel):
     name: str
     location: str
+    esp8266_mac: Optional[str] = None
     current_volume: int = 50
     is_enabled: bool = True
 
 class SensorUpdate(BaseModel):
     name: Optional[str] = None
     location: Optional[str] = None
+    esp8266_mac: Optional[str] = None
     status: Optional[str] = None
     current_volume: Optional[int] = None
     is_enabled: Optional[bool] = None

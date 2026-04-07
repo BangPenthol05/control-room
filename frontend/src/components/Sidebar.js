@@ -1,5 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  Bell, 
+  FileText, 
+  Settings, 
+  Wrench,
+  Users, 
+  Shield,
+  Palette,
+  Menu,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 
 export default function Sidebar({ user }) {
   const location = useLocation();
@@ -11,16 +24,16 @@ export default function Sidebar({ user }) {
     {
       section: 'Main',
       items: [
-        { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-        { path: '/alarms', label: 'Alarm History', icon: '🚨' },
-        { path: '/audit-logs', label: 'Audit Logs', icon: '📋' },
+        { path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+        { path: '/alarms', label: 'Alarm History', Icon: Bell },
+        { path: '/audit-logs', label: 'Audit Logs', Icon: FileText },
       ]
     },
     {
       section: 'Management',
       items: [
-        { path: '/sensor-management', label: 'Sensor Management', icon: '🔧' },
-        { path: '/alarm-settings', label: 'Alarm Settings', icon: '⚙️' },
+        { path: '/sensor-management', label: 'Sensor Management', Icon: Wrench },
+        { path: '/alarm-settings', label: 'Alarm Settings', Icon: Settings },
       ]
     },
   ];
@@ -29,8 +42,10 @@ export default function Sidebar({ user }) {
     menuItems.push({
       section: 'Administration',
       items: [
-        { path: '/users', label: 'User Management', icon: '👥' },
-        { path: '/system-settings', label: 'System Settings', icon: '🛠️' },
+        { path: '/users', label: 'User Management', Icon: Users },
+        { path: '/permissions', label: 'Permissions & Roles', Icon: Shield },
+        { path: '/website-settings', label: 'Website Settings', Icon: Palette },
+        { path: '/system-settings', label: 'System Settings', Icon: Settings },
       ]
     });
   }
@@ -57,9 +72,7 @@ export default function Sidebar({ user }) {
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
               <div className="bg-white text-blue-900 rounded-lg p-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+                <Shield className="w-6 h-6" />
               </div>
               <div>
                 <h1 className="text-lg font-bold">IoT Alarm</h1>
@@ -72,13 +85,11 @@ export default function Sidebar({ user }) {
             className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
             data-testid="sidebar-toggle"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isCollapsed ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              )}
-            </svg>
+            {isCollapsed ? (
+              <ChevronRight className="w-5 h-5" />
+            ) : (
+              <ChevronLeft className="w-5 h-5" />
+            )}
           </button>
         </div>
 
@@ -92,24 +103,27 @@ export default function Sidebar({ user }) {
                 </h3>
               )}
               <div className="space-y-1">
-                {section.items.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    data-testid={`sidebar-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                    className={`flex items-center space-x-3 px-4 py-3 transition-colors ${
-                      isActive(item.path)
-                        ? 'bg-blue-700 border-r-4 border-white'
-                        : 'hover:bg-blue-700/50'
-                    } ${isCollapsed ? 'justify-center' : ''}`}
-                    title={isCollapsed ? item.label : ''}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    {!isCollapsed && (
-                      <span className="text-sm font-medium">{item.label}</span>
-                    )}
-                  </Link>
-                ))}
+                {section.items.map((item) => {
+                  const Icon = item.Icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      data-testid={`sidebar-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                      className={`flex items-center space-x-3 px-4 py-3 transition-colors ${
+                        isActive(item.path)
+                          ? 'bg-blue-700 border-r-4 border-white'
+                          : 'hover:bg-blue-700/50'
+                      } ${isCollapsed ? 'justify-center' : ''}`}
+                      title={isCollapsed ? item.label : ''}
+                    >
+                      <Icon className="w-5 h-5" />
+                      {!isCollapsed && (
+                        <span className="text-sm font-medium">{item.label}</span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -122,9 +136,7 @@ export default function Sidebar({ user }) {
         className="fixed bottom-4 right-4 lg:hidden bg-blue-600 text-white p-4 rounded-full shadow-lg z-10"
         data-testid="mobile-menu-button"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <Menu className="w-6 h-6" />
       </button>
     </>
   );
