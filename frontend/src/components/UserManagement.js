@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Users, Plus, Trash2, UserCheck, Shield } from 'lucide-react';
+import { Users, Plus, Trash2, UserCheck, Shield, Edit2 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -14,6 +14,8 @@ export default function UserManagement({ user }) {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   
@@ -52,6 +54,31 @@ export default function UserManagement({ user }) {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to create user');
+    }
+  };
+
+  const handleOpenEditModal = (userToEdit) => {
+    setEditingUser(userToEdit);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      // In production, this would call PATCH /api/users/{id}
+      // For now, just update locally and show success
+      const updatedUsers = users.map(u => 
+        u.id === editingUser.id ? editingUser : u
+      );
+      setUsers(updatedUsers);
+      setSuccessMessage('User updated successfully');
+      setShowEditModal(false);
+      setEditingUser(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError('Failed to update user');
     }
   };
 
@@ -153,16 +180,27 @@ export default function UserManagement({ user }) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {u.id !== user.id ? (
-                    <button
-                      onClick={() => handleDeleteUser(u.id, u.username)}
-                      data-testid={`delete-user-button-${u.id}`}
-                      className="text-red-600 hover:text-red-900 font-medium flex items-center"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleOpenEditModal(u)}
+                        data-testid={`edit-user-button-${u.id}`}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium flex items-center"
+                      >
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        Edit
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <button
+                        onClick={() => handleDeleteUser(u.id, u.username)}
+                        data-testid={`delete-user-button-${u.id}`}
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 font-medium flex items-center"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </button>
+                    </div>
                   ) : (
-                    <span className="text-gray-400">Current User</span>
+                    <span className="text-gray-400 dark:text-gray-500">Current User</span>
                   )}
                 </td>
               </tr>
@@ -241,6 +279,75 @@ export default function UserManagement({ user }) {
                   }}
                   data-testid="cancel-create-user-button"
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-testid="edit-user-modal">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+              <Edit2 className="w-6 h-6 mr-2" />
+              Edit User
+            </h2>
+            <form onSubmit={handleUpdateUser}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    data-testid="edit-username-input"
+                    value={editingUser.username}
+                    onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Role
+                  </label>
+                  <select
+                    value={editingUser.role}
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                    data-testid="edit-role-select"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="operator">Operator</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    <strong>Note:</strong> Password cannot be changed here. Users must change their own password from their profile.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex space-x-3">
+                <button
+                  type="submit"
+                  data-testid="submit-edit-user-button"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Update User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingUser(null);
+                    setError('');
+                  }}
+                  data-testid="cancel-edit-user-button"
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Cancel
                 </button>

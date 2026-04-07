@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Bell, Filter, CheckCircle, Clock } from 'lucide-react';
+import { Bell, Filter, CheckCircle, Clock, Download } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -56,6 +56,45 @@ export default function AlarmHistory({ user }) {
     return `${minutes}m ${remainingSeconds}s`;
   };
 
+  const exportToCSV = () => {
+    const headers = ['Sensor Name', 'Location', 'Triggered At', 'Duration', 'Status'];
+    const rows = alarms.map(alarm => [
+      alarm.sensor_name,
+      alarm.sensor_location,
+      format(new Date(alarm.triggered_at), 'MMM dd, yyyy HH:mm:ss'),
+      alarm.status === 'active' ? 'Ongoing' : formatDuration(alarm.duration),
+      alarm.status
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alarm_history_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportToJSON = () => {
+    const jsonContent = JSON.stringify(alarms, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alarm_history_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -66,12 +105,32 @@ export default function AlarmHistory({ user }) {
 
   return (
     <div className="p-6" data-testid="alarm-history-container">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-          <Bell className="w-8 h-8 mr-3 text-red-600" />
-          Alarm History
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">View and manage alarm events</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+            <Bell className="w-8 h-8 mr-3 text-red-600" />
+            Alarm History
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">View and manage alarm events</p>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={exportToCSV}
+            data-testid="export-csv-button"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+          >
+            <Download className="w-5 h-5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={exportToJSON}
+            data-testid="export-json-button"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Download className="w-5 h-5" />
+            <span>Export JSON</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">

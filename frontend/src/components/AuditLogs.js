@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { FileText, Filter, User, Activity } from 'lucide-react';
+import { FileText, Filter, User, Activity, Download } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -46,6 +46,44 @@ export default function AuditLogs({ user }) {
     return 'bg-gray-100 text-gray-800 dark:text-gray-100';
   };
 
+  const exportToCSV = () => {
+    const headers = ['Timestamp', 'User', 'Action', 'Details'];
+    const rows = logs.map(log => [
+      format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm:ss'),
+      log.username || 'System',
+      log.action_type,
+      log.details || '-'
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit_logs_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportToJSON = () => {
+    const jsonContent = JSON.stringify(logs, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit_logs_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -56,12 +94,32 @@ export default function AuditLogs({ user }) {
 
   return (
     <div className="p-6" data-testid="audit-logs-container">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-          <FileText className="w-8 h-8 mr-3 text-blue-600" />
-          Audit Logs
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">Comprehensive activity history and system logs</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+            <FileText className="w-8 h-8 mr-3 text-blue-600" />
+            Audit Logs
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Comprehensive activity history and system logs</p>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={exportToCSV}
+            data-testid="export-logs-csv-button"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+          >
+            <Download className="w-5 h-5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={exportToJSON}
+            data-testid="export-logs-json-button"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Download className="w-5 h-5" />
+            <span>Export JSON</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
