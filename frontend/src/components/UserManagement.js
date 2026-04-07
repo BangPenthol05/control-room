@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Users, Plus, Trash2, UserCheck, Shield } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -16,7 +17,6 @@ export default function UserManagement({ user }) {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   
-  // Form state
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -79,23 +79,25 @@ export default function UserManagement({ user }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="user-management-container">
-      {/* Header */}
+    <div className="p-6" data-testid="user-management-container">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            <Users className="w-8 h-8 mr-3 text-blue-600" />
+            User Management
+          </h1>
           <p className="text-gray-600 mt-1">Manage system users and permissions</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
           data-testid="create-user-button"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
         >
-          + Create User
+          <Plus className="w-5 h-5" />
+          <span>Create User</span>
         </button>
       </div>
 
-      {/* Notifications */}
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg" data-testid="error-message">
           {error}
@@ -107,7 +109,6 @@ export default function UserManagement({ user }) {
         </div>
       )}
 
-      {/* Users Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200" data-testid="users-table">
           <thead className="bg-gray-50">
@@ -130,16 +131,20 @@ export default function UserManagement({ user }) {
             {users.map((u) => (
               <tr key={u.id} data-testid={`user-row-${u.id}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{u.username}</div>
+                  <div className="text-sm font-medium text-gray-900 flex items-center">
+                    <UserCheck className="w-4 h-4 mr-2 text-gray-400" />
+                    {u.username}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full items-center ${
                       u.role === 'admin'
                         ? 'bg-purple-100 text-purple-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}
                   >
+                    <Shield className="w-3 h-3 mr-1" />
                     {u.role}
                   </span>
                 </td>
@@ -151,8 +156,9 @@ export default function UserManagement({ user }) {
                     <button
                       onClick={() => handleDeleteUser(u.id, u.username)}
                       data-testid={`delete-user-button-${u.id}`}
-                      className="text-red-600 hover:text-red-900 font-medium"
+                      className="text-red-600 hover:text-red-900 font-medium flex items-center"
                     >
+                      <Trash2 className="w-4 h-4 mr-1" />
                       Delete
                     </button>
                   ) : (
@@ -165,11 +171,13 @@ export default function UserManagement({ user }) {
         </table>
       </div>
 
-      {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="create-user-modal">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New User</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-testid="create-user-modal">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+              <Users className="w-6 h-6 mr-2" />
+              Create New User
+            </h2>
             <form onSubmit={handleCreateUser}>
               <div className="space-y-4">
                 <div>

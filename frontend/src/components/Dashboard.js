@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import SensorCard from './SensorCard';
 import { Slider } from '@/components/ui/slider';
+import { BarChart3, TrendingUp, Activity, AlertCircle, CheckCircle, XCircle, Bell } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -10,13 +12,17 @@ const getAuthHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
 });
 
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
 export default function Dashboard({ user }) {
   const [sensors, setSensors] = useState([]);
   const [alarms, setAlarms] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [globalVolume, setGlobalVolume] = useState(50);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showCharts, setShowCharts] = useState(true);
 
   const fetchSensors = useCallback(async () => {
     try {
@@ -30,29 +36,37 @@ export default function Dashboard({ user }) {
 
   const fetchAlarms = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/alarms?status=active&limit=10`, getAuthHeaders());
+      const response = await axios.get(`${API}/alarms?limit=100`, getAuthHeaders());
       setAlarms(response.data);
     } catch (err) {
       console.error('Error fetching alarms:', err);
     }
   }, []);
 
+  const fetchAuditLogs = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/audit-logs?limit=50`, getAuthHeaders());
+      setAuditLogs(response.data);
+    } catch (err) {
+      console.error('Error fetching audit logs:', err);
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await Promise.all([fetchSensors(), fetchAlarms()]);
+      await Promise.all([fetchSensors(), fetchAlarms(), fetchAuditLogs()]);
       setIsLoading(false);
     };
     loadData();
 
-    // Refresh data every 5 seconds for real-time updates
     const interval = setInterval(() => {
       fetchSensors();
       fetchAlarms();
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [fetchSensors, fetchAlarms]);
+  }, [fetchSensors, fetchAlarms, fetchAuditLogs]);
 
   const updateSensor = async (sensorId, updateData) => {
     try {
@@ -69,10 +83,7 @@ export default function Dashboard({ user }) {
       const sensorIds = sensors.map(s => s.id);
       await axios.post(
         `${API}/sensors/bulk-control`,
-        {
-          sensor_ids: sensorIds,
-          action: enable ? 'enable' : 'disable'
-        },
+        { sensor_ids: sensorIds, action: enable ? 'enable' : 'disable' },
         getAuthHeaders()
       );
       await fetchSensors();
@@ -87,11 +98,7 @@ export default function Dashboard({ user }) {
       const sensorIds = sensors.map(s => s.id);
       await axios.post(
         `${API}/sensors/bulk-control`,
-        {
-          sensor_ids: sensorIds,
-          action: 'volume',
-          value: globalVolume
-        },
+        { sensor_ids: sensorIds, action: 'volume', value: globalVolume },
         getAuthHeaders()
       );
       await fetchSensors();
@@ -106,9 +113,28 @@ export default function Dashboard({ user }) {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  // Chart Data Processing
+  const sensorStatusData = [
+    { name: 'Active', value: sensors.filter(s => s.is_enabled).length },
+    { name: 'Inactive', value: sensors.filter(s => !s.is_enabled).length },
+    { name: 'Alarm', value: sensors.filter(s => s.status === 'alarm').length },
+  ];
+
+  const alarmTrendData = alarms.slice(0, 10).reverse().map((alarm, idx) => ({
+    name: `A${idx + 1}`,
+    duration: alarm.duration || 0,
+    sensor: alarm.sensor_name
+  }));
+
+  const activityData = auditLogs.slice(0, 10).reverse().map((log, idx) => ({
+    time: new Date(log.timestamp).getHours() + ':00',
+    actions: 1
+  }));
+
   const activeSensors = sensors.filter(s => s.is_enabled).length;
   const inactiveSensors = sensors.length - activeSensors;
   const sensorsInAlarm = sensors.filter(s => s.status === 'alarm').length;
+  const activeAlarms = alarms.filter(a => a.status === 'active').length;
 
   if (isLoading) {
     return (
@@ -119,34 +145,42 @@ export default function Dashboard({ user }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="dashboard-container">
-      {/* Header */}
+    <div className="p-6" data-testid="dashboard-container">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Control Room Dashboard</h1>
-        <p className="text-gray-600 mt-1">Real-time sensor monitoring and control</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Control Room Dashboard</h1>
+            <p className="text-gray-600 mt-1">Real-time sensor monitoring and control</p>
+          </div>
+          <button
+            onClick={() => setShowCharts(!showCharts)}
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center space-x-2"
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span>{showCharts ? 'Hide' : 'Show'} Charts</span>
+          </button>
+        </div>
       </div>
 
-      {/* Notifications */}
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg" data-testid="error-message">
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center" data-testid="error-message">
+          <AlertCircle className="w-5 h-5 mr-2" />
           {error}
         </div>
       )}
       {successMessage && (
-        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg" data-testid="success-message">
+        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center" data-testid="success-message">
+          <CheckCircle className="w-5 h-5 mr-2" />
           {successMessage}
         </div>
       )}
 
-      {/* Active Alarms */}
-      {alarms.length > 0 && (
+      {activeAlarms > 0 && (
         <div className="mb-6 bg-red-50 border-2 border-red-500 rounded-lg p-4 animate-pulse" data-testid="active-alarms-banner">
           <div className="flex items-center">
-            <svg className="w-6 h-6 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
+            <Bell className="w-6 h-6 text-red-600 mr-3" />
             <div>
-              <h3 className="text-lg font-bold text-red-900">Active Alarms: {alarms.length}</h3>
+              <h3 className="text-lg font-bold text-red-900">Active Alarms: {activeAlarms}</h3>
               <p className="text-sm text-red-700">Door(s) have been open for more than 10 seconds</p>
             </div>
           </div>
@@ -158,9 +192,7 @@ export default function Dashboard({ user }) {
         <div className="bg-white rounded-lg shadow p-6" data-testid="total-sensors-card">
           <div className="flex items-center">
             <div className="bg-blue-100 rounded-lg p-3">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Activity className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Sensors</p>
@@ -172,9 +204,7 @@ export default function Dashboard({ user }) {
         <div className="bg-white rounded-lg shadow p-6" data-testid="active-sensors-card">
           <div className="flex items-center">
             <div className="bg-green-100 rounded-lg p-3">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active</p>
@@ -186,9 +216,7 @@ export default function Dashboard({ user }) {
         <div className="bg-white rounded-lg shadow p-6" data-testid="inactive-sensors-card">
           <div className="flex items-center">
             <div className="bg-gray-100 rounded-lg p-3">
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <XCircle className="w-6 h-6 text-gray-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Inactive</p>
@@ -200,9 +228,7 @@ export default function Dashboard({ user }) {
         <div className="bg-white rounded-lg shadow p-6" data-testid="alarms-card">
           <div className="flex items-center">
             <div className="bg-red-100 rounded-lg p-3">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
+              <Bell className="w-6 h-6 text-red-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">In Alarm</p>
@@ -211,6 +237,55 @@ export default function Dashboard({ user }) {
           </div>
         </div>
       </div>
+
+      {/* Charts Section */}
+      {showCharts && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Sensor Status Distribution */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Activity className="w-5 h-5 mr-2" />
+              Sensor Status Distribution
+            </h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={sensorStatusData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => `${entry.name}: ${entry.value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {sensorStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Alarm Duration Trend */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2" />
+              Recent Alarm Durations
+            </h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={alarmTrendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="duration" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Global Controls */}
       <div className="bg-white rounded-lg shadow p-6 mb-8" data-testid="global-controls">

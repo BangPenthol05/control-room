@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Bell, Filter, CheckCircle, Clock } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -16,7 +17,6 @@ export default function AlarmHistory({ user }) {
 
   useEffect(() => {
     fetchAlarms();
-    // Refresh every 10 seconds
     const interval = setInterval(fetchAlarms, 10000);
     return () => clearInterval(interval);
   }, [filterStatus]);
@@ -65,16 +65,20 @@ export default function AlarmHistory({ user }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="alarm-history-container">
-      {/* Header */}
+    <div className="p-6" data-testid="alarm-history-container">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Alarm History</h1>
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+          <Bell className="w-8 h-8 mr-3 text-red-600" />
+          Alarm History
+        </h1>
         <p className="text-gray-600 mt-1">View and manage alarm events</p>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+          <Filter className="w-4 h-4 mr-2" />
+          Filter by Status
+        </label>
         <div className="flex space-x-2">
           <button
             onClick={() => setFilterStatus('all')}
@@ -112,7 +116,6 @@ export default function AlarmHistory({ user }) {
         </div>
       </div>
 
-      {/* Alarm Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200" data-testid="alarm-table">
@@ -155,7 +158,8 @@ export default function AlarmHistory({ user }) {
                       <div className="text-sm text-gray-600">{alarm.sensor_location}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-gray-900 flex items-center">
+                        <Clock className="w-4 h-4 mr-1 text-gray-400" />
                         {format(new Date(alarm.triggered_at), 'MMM dd, yyyy HH:mm:ss')}
                       </div>
                     </td>
@@ -170,14 +174,18 @@ export default function AlarmHistory({ user }) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full items-center ${
                           alarm.status === 'active'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-green-100 text-green-800'
                         }`}
                         data-testid={`alarm-status-${alarm.id}`}
                       >
-                        {alarm.status === 'active' ? 'Active' : 'Resolved'}
+                        {alarm.status === 'active' ? (
+                          <><Bell className="w-3 h-3 mr-1" /> Active</>
+                        ) : (
+                          <><CheckCircle className="w-3 h-3 mr-1" /> Resolved</>
+                        )}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -185,8 +193,9 @@ export default function AlarmHistory({ user }) {
                         <button
                           onClick={() => resolveAlarm(alarm.id)}
                           data-testid={`resolve-alarm-button-${alarm.id}`}
-                          className="text-blue-600 hover:text-blue-900 font-medium"
+                          className="text-blue-600 hover:text-blue-900 font-medium flex items-center"
                         >
+                          <CheckCircle className="w-4 h-4 mr-1" />
                           Resolve
                         </button>
                       ) : (

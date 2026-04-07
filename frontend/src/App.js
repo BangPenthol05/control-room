@@ -9,6 +9,8 @@ import UserManagement from '@/components/UserManagement';
 import SensorManagement from '@/components/SensorManagement';
 import AlarmSettings from '@/components/AlarmSettings';
 import SystemSettings from '@/components/SystemSettings';
+import PermissionsSettings from '@/components/PermissionsSettings';
+import WebsiteSettings from '@/components/WebsiteSettings';
 import Profile from '@/components/Profile';
 import '@/App.css';
 
@@ -60,6 +62,8 @@ function App() {
               {user.role === 'admin' && (
                 <>
                   <Route path="/users" element={<UserManagement user={user} />} />
+                  <Route path="/permissions" element={<PermissionsSettings user={user} />} />
+                  <Route path="/website-settings" element={<WebsiteSettings user={user} />} />
                   <Route path="/system-settings" element={<SystemSettings user={user} />} />
                 </>
               )}

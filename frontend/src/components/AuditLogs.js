@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { FileText, Filter, User, Activity } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -22,12 +23,8 @@ export default function AuditLogs({ user }) {
   const fetchLogs = async () => {
     try {
       let url = `${API}/audit-logs?limit=500`;
-      if (filterAction) {
-        url += `&action_type=${filterAction}`;
-      }
-      if (filterUsername) {
-        url += `&username=${filterUsername}`;
-      }
+      if (filterAction) url += `&action_type=${filterAction}`;
+      if (filterUsername) url += `&username=${filterUsername}`;
       const response = await axios.get(url, getAuthHeaders());
       setLogs(response.data);
     } catch (err) {
@@ -37,13 +34,8 @@ export default function AuditLogs({ user }) {
     }
   };
 
-  const actionTypes = [
-    ...new Set(logs.map((log) => log.action_type).filter(Boolean)),
-  ];
-
-  const usernames = [
-    ...new Set(logs.map((log) => log.username).filter(Boolean)),
-  ];
+  const actionTypes = [...new Set(logs.map((log) => log.action_type).filter(Boolean))];
+  const usernames = [...new Set(logs.map((log) => log.username).filter(Boolean))];
 
   const getActionColor = (actionType) => {
     if (actionType.includes('login')) return 'bg-blue-100 text-blue-800';
@@ -63,18 +55,22 @@ export default function AuditLogs({ user }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="audit-logs-container">
-      {/* Header */}
+    <div className="p-6" data-testid="audit-logs-container">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+          <FileText className="w-8 h-8 mr-3 text-blue-600" />
+          Audit Logs
+        </h1>
         <p className="text-gray-600 mt-1">Comprehensive activity history and system logs</p>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Action Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+              <Activity className="w-4 h-4 mr-2" />
+              Filter by Action Type
+            </label>
             <select
               value={filterAction}
               onChange={(e) => setFilterAction(e.target.value)}
@@ -90,7 +86,10 @@ export default function AuditLogs({ user }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by User</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+              <User className="w-4 h-4 mr-2" />
+              Filter by User
+            </label>
             <select
               value={filterUsername}
               onChange={(e) => setFilterUsername(e.target.value)}
@@ -113,14 +112,14 @@ export default function AuditLogs({ user }) {
               setFilterUsername('');
             }}
             data-testid="clear-filters-button"
-            className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
           >
+            <Filter className="w-4 h-4 mr-1" />
             Clear Filters
           </button>
         )}
       </div>
 
-      {/* Logs Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200" data-testid="audit-logs-table">
@@ -156,7 +155,8 @@ export default function AuditLogs({ user }) {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 flex items-center">
+                        <User className="w-4 h-4 mr-1 text-gray-400" />
                         {log.username || 'System'}
                       </div>
                     </td>
@@ -185,8 +185,8 @@ export default function AuditLogs({ user }) {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="mt-6 text-sm text-gray-600 text-center">
+      <div className="mt-6 text-sm text-gray-600 text-center flex items-center justify-center">
+        <FileText className="w-4 h-4 mr-2" />
         Showing {logs.length} log entries
       </div>
     </div>

@@ -1,0 +1,368 @@
+import { useState, useEffect } from 'react';
+import { Shield, Plus, Edit2, Trash2, CheckSquare, Square } from 'lucide-react';
+
+const DEFAULT_PERMISSIONS = [
+  { id: 'dashboard_view', label: 'View Dashboard', category: 'Dashboard' },
+  { id: 'sensors_view', label: 'View Sensors', category: 'Sensors' },
+  { id: 'sensors_control', label: 'Control Sensors', category: 'Sensors' },
+  { id: 'sensors_manage', label: 'Manage Sensors (CRUD)', category: 'Sensors' },
+  { id: 'alarms_view', label: 'View Alarms', category: 'Alarms' },
+  { id: 'alarms_resolve', label: 'Resolve Alarms', category: 'Alarms' },
+  { id: 'alarms_settings', label: 'Alarm Settings', category: 'Alarms' },
+  { id: 'logs_view', label: 'View Audit Logs', category: 'Audit' },
+  { id: 'users_view', label: 'View Users', category: 'Users' },
+  { id: 'users_manage', label: 'Manage Users', category: 'Users' },
+  { id: 'roles_manage', label: 'Manage Roles & Permissions', category: 'System' },
+  { id: 'settings_manage', label: 'Manage System Settings', category: 'System' },
+];
+
+const DEFAULT_ROLES = [
+  {
+    id: 'admin',
+    name: 'Administrator',
+    description: 'Full system access with all permissions',
+    permissions: DEFAULT_PERMISSIONS.map(p => p.id),
+    isSystem: true
+  },
+  {
+    id: 'operator',
+    name: 'Operator',
+    description: 'Monitor and control sensors, view alarms and logs',
+    permissions: ['dashboard_view', 'sensors_view', 'sensors_control', 'alarms_view', 'alarms_resolve', 'logs_view'],
+    isSystem: true
+  }
+];
+
+export default function PermissionsSettings({ user }) {
+  const [roles, setRoles] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingRole, setEditingRole] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    permissions: []
+  });
+
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
+  const loadRoles = () => {
+    const savedRoles = localStorage.getItem('customRoles');
+    if (savedRoles) {
+      setRoles([...DEFAULT_ROLES, ...JSON.parse(savedRoles)]);
+    } else {
+      setRoles(DEFAULT_ROLES);
+    }
+  };
+
+  const saveRoles = (updatedRoles) => {
+    const customRoles = updatedRoles.filter(r => !r.isSystem);
+    localStorage.setItem('customRoles', JSON.stringify(customRoles));
+    setRoles(updatedRoles);
+  };
+
+  const handleOpenModal = (role = null) => {
+    if (role) {
+      setEditingRole(role);
+      setFormData({
+        name: role.name,
+        description: role.description,
+        permissions: role.permissions
+      });
+    } else {
+      setEditingRole(null);
+      setFormData({
+        name: '',
+        description: '',
+        permissions: []
+      });
+    }
+    setShowModal(true);
+    setError('');
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingRole(null);
+    setFormData({ name: '', description: '', permissions: [] });
+    setError('');
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (formData.permissions.length === 0) {
+      setError('Please select at least one permission');
+      return;
+    }
+
+    const roleId = editingRole ? editingRole.id : `role_${Date.now()}`;
+    const newRole = {
+      id: roleId,
+      ...formData,
+      isSystem: false
+    };
+
+    let updatedRoles;
+    if (editingRole) {
+      updatedRoles = roles.map(r => r.id === editingRole.id ? newRole : r);
+      setSuccessMessage('Role updated successfully');
+    } else {
+      updatedRoles = [...roles, newRole];
+      setSuccessMessage('Role created successfully');
+    }
+
+    saveRoles(updatedRoles);
+    handleCloseModal();
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const handleDelete = (roleId, roleName) => {
+    if (!window.confirm(`Are you sure you want to delete role \"${roleName}\"?`)) {
+      return;
+    }
+
+    const updatedRoles = roles.filter(r => r.id !== roleId);
+    saveRoles(updatedRoles);
+    setSuccessMessage('Role deleted successfully');
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const togglePermission = (permissionId) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permissionId)
+        ? prev.permissions.filter(p => p !== permissionId)
+        : [...prev.permissions, permissionId]
+    }));
+  };
+
+  const toggleAllInCategory = (category) => {
+    const categoryPermissions = DEFAULT_PERMISSIONS.filter(p => p.category === category).map(p => p.id);
+    const allSelected = categoryPermissions.every(p => formData.permissions.includes(p));
+    
+    if (allSelected) {
+      setFormData(prev => ({
+        ...prev,
+        permissions: prev.permissions.filter(p => !categoryPermissions.includes(p))
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        permissions: [...new Set([...prev.permissions, ...categoryPermissions])]
+      }));
+    }
+  };
+
+  const categories = [...new Set(DEFAULT_PERMISSIONS.map(p => p.category))];
+
+  return (
+    <div className=\"p-6\" data-testid=\"permissions-settings-container\">
+      <div className=\"mb-8 flex justify-between items-center\">
+        <div>
+          <h1 className=\"text-3xl font-bold text-gray-900 flex items-center\">
+            <Shield className=\"w-8 h-8 mr-3 text-purple-600\" />
+            Permissions & Roles
+          </h1>
+          <p className=\"text-gray-600 mt-1\">Manage custom roles and permission settings</p>
+        </div>
+        <button
+          onClick={() => handleOpenModal()}
+          data-testid=\"create-role-button\"
+          className=\"px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2\"
+        >
+          <Plus className=\"w-5 h-5\" />
+          <span>Create Role</span>
+        </button>
+      </div>
+
+      {error && (
+        <div className=\"mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg\">
+          {error}
+        </div>
+      )}
+      {successMessage && (
+        <div className=\"mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg\">
+          {successMessage}
+        </div>
+      )}
+
+      <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\">
+        {roles.map((role) => (
+          <div
+            key={role.id}
+            className=\"bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-600\"
+            data-testid={`role-card-${role.id}`}
+          >
+            <div className=\"flex justify-between items-start mb-3\">
+              <div className=\"flex-1\">
+                <h3 className=\"text-lg font-bold text-gray-900 flex items-center\">
+                  <Shield className=\"w-5 h-5 mr-2 text-purple-600\" />
+                  {role.name}
+                </h3>
+                <p className=\"text-sm text-gray-600 mt-1\">{role.description}</p>
+              </div>
+              {role.isSystem && (
+                <span className=\"px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800\">
+                  System
+                </span>
+              )}
+            </div>
+
+            <div className=\"mb-4\">
+              <p className=\"text-xs font-semibold text-gray-500 mb-2\">PERMISSIONS ({role.permissions.length})</p>
+              <div className=\"flex flex-wrap gap-1\">
+                {role.permissions.slice(0, 5).map(permId => {
+                  const perm = DEFAULT_PERMISSIONS.find(p => p.id === permId);
+                  return perm ? (
+                    <span key={permId} className=\"px-2 py-1 text-xs bg-purple-50 text-purple-700 rounded\">
+                      {perm.label}
+                    </span>
+                  ) : null;
+                })}
+                {role.permissions.length > 5 && (
+                  <span className=\"px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded\">
+                    +{role.permissions.length - 5} more
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {!role.isSystem && (
+              <div className=\"flex space-x-2\">
+                <button
+                  onClick={() => handleOpenModal(role)}
+                  data-testid={`edit-role-button-${role.id}`}
+                  className=\"flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center justify-center space-x-1\"
+                >
+                  <Edit2 className=\"w-4 h-4\" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => handleDelete(role.id, role.name)}
+                  data-testid={`delete-role-button-${role.id}`}
+                  className=\"flex-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium flex items-center justify-center space-x-1\"
+                >
+                  <Trash2 className=\"w-4 h-4\" />
+                  <span>Delete</span>
+                </button>
+              </div>
+            )}
+            {role.isSystem && (
+              <div className=\"text-xs text-gray-500 text-center pt-2 border-t\">
+                System role - cannot be modified
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {showModal && (
+        <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4\" data-testid=\"role-modal\">
+          <div className=\"bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto\">
+            <h2 className=\"text-2xl font-bold text-gray-900 mb-4 flex items-center\">
+              <Shield className=\"w-6 h-6 mr-2 text-purple-600\" />
+              {editingRole ? 'Edit Role' : 'Create New Role'}
+            </h2>
+            <form onSubmit={handleSubmit}>
+              <div className=\"space-y-4 mb-6\">
+                <div>
+                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">
+                    Role Name *
+                  </label>
+                  <input
+                    type=\"text\"
+                    required
+                    data-testid=\"role-name-input\"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className=\"w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500\"
+                    placeholder=\"e.g., Supervisor\"
+                  />
+                </div>
+                <div>
+                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">
+                    Description
+                  </label>
+                  <textarea
+                    data-testid=\"role-description-input\"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className=\"w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500\"
+                    placeholder=\"Describe this role...\"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className=\"mb-6\">
+                <h3 className=\"text-lg font-semibold text-gray-900 mb-3\">Permissions</h3>
+                <div className=\"space-y-4\">
+                  {categories.map(category => {
+                    const categoryPerms = DEFAULT_PERMISSIONS.filter(p => p.category === category);
+                    const allSelected = categoryPerms.every(p => formData.permissions.includes(p.id));
+                    
+                    return (
+                      <div key={category} className=\"border border-gray-200 rounded-lg p-4\">
+                        <div className=\"flex items-center justify-between mb-3\">
+                          <h4 className=\"font-semibold text-gray-800\">{category}</h4>
+                          <button
+                            type=\"button\"
+                            onClick={() => toggleAllInCategory(category)}
+                            className=\"text-sm text-purple-600 hover:text-purple-800 font-medium\"
+                          >
+                            {allSelected ? 'Deselect All' : 'Select All'}
+                          </button>
+                        </div>
+                        <div className=\"grid grid-cols-1 md:grid-cols-2 gap-2\">
+                          {categoryPerms.map(permission => (
+                            <button
+                              key={permission.id}
+                              type=\"button\"
+                              onClick={() => togglePermission(permission.id)}
+                              className=\"flex items-center space-x-2 p-2 rounded hover:bg-gray-50 transition-colors text-left\"
+                            >
+                              {formData.permissions.includes(permission.id) ? (
+                                <CheckSquare className=\"w-5 h-5 text-purple-600\" />
+                              ) : (
+                                <Square className=\"w-5 h-5 text-gray-400\" />
+                              )}
+                              <span className=\"text-sm text-gray-700\">{permission.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className=\"flex space-x-3\">
+                <button
+                  type=\"submit\"
+                  data-testid=\"submit-role-button\"
+                  className=\"flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors\"
+                >
+                  {editingRole ? 'Update Role' : 'Create Role'}
+                </button>
+                <button
+                  type=\"button\"
+                  onClick={handleCloseModal}
+                  data-testid=\"cancel-role-button\"
+                  className=\"flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors\"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
