@@ -11,8 +11,7 @@ const API = `${BACKEND_URL}/api`;
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   if (!token) {
-    console.error('No authentication token found');
-    window.location.href = '/';
+    console.warn('[Auth] No token found in localStorage');
     return { headers: {} };
   }
   return {
@@ -34,46 +33,103 @@ export default function Dashboard({ user }) {
 
   const fetchSensors = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/sensors`, getAuthHeaders());
+      const authHeaders = getAuthHeaders();
+      if (!authHeaders.headers.Authorization) {
+        console.warn('[Dashboard] Skipping fetchSensors - no auth token');
+        return;
+      }
+      const response = await axios.get(`${API}/sensors`, authHeaders);
       setSensors(response.data);
     } catch (err) {
-      console.error('Error fetching sensors:', err);
-      setError('Failed to load sensors');
+      if (err.response?.status === 401) {
+        console.error('[Dashboard] 401 Unauthorized - clearing session');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+      } else {
+        console.error('Error fetching sensors:', err);
+        setError('Failed to load sensors');
+      }
     }
   }, []);
 
   const fetchAlarms = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/alarms?limit=100`, getAuthHeaders());
+      const authHeaders = getAuthHeaders();
+      if (!authHeaders.headers.Authorization) {
+        console.warn('[Dashboard] Skipping fetchAlarms - no auth token');
+        return;
+      }
+      const response = await axios.get(`${API}/alarms?limit=100`, authHeaders);
       setAlarms(response.data);
     } catch (err) {
-      console.error('Error fetching alarms:', err);
+      if (err.response?.status === 401) {
+        console.error('[Dashboard] 401 Unauthorized - clearing session');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+      } else {
+        console.error('Error fetching alarms:', err);
+      }
     }
   }, []);
 
   const fetchAuditLogs = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/audit-logs?limit=50`, getAuthHeaders());
+      const authHeaders = getAuthHeaders();
+      if (!authHeaders.headers.Authorization) {
+        console.warn('[Dashboard] Skipping fetchAuditLogs - no auth token');
+        return;
+      }
+      const response = await axios.get(`${API}/audit-logs?limit=50`, authHeaders);
       setAuditLogs(response.data);
     } catch (err) {
-      console.error('Error fetching audit logs:', err);
+      if (err.response?.status === 401) {
+        console.error('[Dashboard] 401 Unauthorized - clearing session');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+      } else {
+        console.error('Error fetching audit logs:', err);
+      }
     }
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
     const loadData = async () => {
+      if (!isMounted) return;
+      
       setIsLoading(true);
-      await Promise.all([fetchSensors(), fetchAlarms(), fetchAuditLogs()]);
-      setIsLoading(false);
+      try {
+        await Promise.all([fetchSensors(), fetchAlarms(), fetchAuditLogs()]);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('[Dashboard] Error loading data:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
+    
     loadData();
 
     const interval = setInterval(() => {
-      fetchSensors();
-      fetchAlarms();
+      if (isMounted) {
+        fetchSensors();
+        fetchAlarms();
+      }
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      abortController.abort();
+    };
   }, [fetchSensors, fetchAlarms, fetchAuditLogs]);
 
   // Early return AFTER all hooks to comply with Rules of Hooks
