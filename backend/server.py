@@ -231,6 +231,32 @@ class AuditLogCreate(BaseModel):
     ip_address: Optional[str] = None
     details: Optional[str] = None
 
+class SmtpConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    host: str
+    port: int
+    username: str
+    password: str
+    from_email: str
+    use_tls: bool = True
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmailTemplate(BaseModel):
+    subject: str
+    body: str
+
+class EmailTemplates(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    alarm: EmailTemplate
+    sensor_offline: EmailTemplate
+    system_change: EmailTemplate
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TestEmailRequest(BaseModel):
+    recipient: str
+
 # ==================== AUTH HELPERS ====================
 
 def verify_password(plain_password, hashed_password):
@@ -696,7 +722,12 @@ async def get_notifications(
             created_at = notif['created_at']
         
         result.append(NotificationResponse(
-            **notif,
+            id=notif['id'],
+            type=notif['type'],
+            title=notif['title'],
+            message=notif['message'],
+            related_id=notif.get('related_id'),
+            read=notif['read'],
             created_at=created_at,
             time_ago=get_time_ago(created_at)
         ))
@@ -866,6 +897,188 @@ async def delete_user(user_id: str, current_user: User = Depends(get_current_adm
     ))
     
     return {"message": "User deleted successfully"}
+
+# ==================== SETTINGS ROUTES ====================
+
+@api_router.get("/settings/smtp")
+async def get_smtp_config(current_user: User = Depends(get_current_admin_user)):
+    """Get SMTP configuration"""
+    config = await db.smtp_config.find_one({}, {"_id": 0})
+    if not config:
+        # Return default config
+        return {
+            "host": "",
+            "port": 587,
+            "username": "",
+            "password": "",
+            "from_email": "",
+            "use_tls": True
+        }
+    return config
+
+@api_router.post("/settings/smtp")
+async def save_smtp_config(
+    config: SmtpConfig,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Save SMTP configuration"""
+    config_dict = config.model_dump()
+    
+    # Check if config exists
+    existing = await db.smtp_config.find_one({})
+    
+    if existing:
+        # Update existing
+        await db.smtp_config.update_one(
+            {"id": existing["id"]},
+            {"$set": config_dict}
+        )
+    else:
+        # Insert new
+        await db.smtp_config.insert_one(config_dict)
+    
+    # Create audit log
+    await create_audit_log(AuditLogCreate(
+        user_id=current_user.id,
+        username=current_user.username,
+        action_type="smtp_config_updated",
+        target_type="settings",
+        details="SMTP configuration updated"
+    ))
+    
+    return {"message": "SMTP configuration saved successfully"}
+
+@api_router.get("/settings/email-templates")
+async def get_email_templates(current_user: User = Depends(get_current_admin_user)):
+    """Get email templates"""
+    templates = await db.email_templates.find_one({}, {"_id": 0})
+    if not templates:
+        # Return default templates
+        return {
+            "alarm": {
+                "subject": "🚨 Alarm Triggered - {{sensor_name}}",
+                "body": "Alarm has been triggered on sensor {{sensor_name}} at {{location}}.\n\nTime: {{timestamp}}\nDetails: {{details}}"
+            },
+            "sensor_offline": {
+                "subject": "⚠️ Sensor Offline - {{sensor_name}}",
+                "body": "Sensor {{sensor_name}} at {{location}} is currently offline.\n\nLast seen: {{last_seen}}\nPlease check the sensor connection."
+            },
+            "system_change": {
+                "subject": "ℹ️ System Configuration Changed",
+                "body": "System configuration has been modified.\n\nChanged by: {{user}}\nChange type: {{change_type}}\nDetails: {{details}}\nTime: {{timestamp}}"
+            }
+        }
+    return templates
+
+@api_router.post("/settings/email-templates")
+async def save_email_templates(
+    templates: EmailTemplates,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Save email templates"""
+    templates_dict = templates.model_dump()
+    
+    # Check if templates exist
+    existing = await db.email_templates.find_one({})
+    
+    if existing:
+        # Update existing
+        await db.email_templates.update_one(
+            {"id": existing["id"]},
+            {"$set": templates_dict}
+        )
+    else:
+        # Insert new
+        await db.email_templates.insert_one(templates_dict)
+    
+    # Create audit log
+    await create_audit_log(AuditLogCreate(
+        user_id=current_user.id,
+        username=current_user.username,
+        action_type="email_templates_updated",
+        target_type="settings",
+        details="Email templates updated"
+    ))
+    
+    return {"message": "Email templates saved successfully"}
+
+@api_router.post("/settings/test-email")
+async def send_test_email(
+    request: TestEmailRequest,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Send a test email using configured SMTP"""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    # Get SMTP config
+    config = await db.smtp_config.find_one({}, {"_id": 0})
+    if not config or not config.get('host'):
+        raise HTTPException(
+            status_code=400,
+            detail="SMTP configuration not set. Please configure SMTP settings first."
+        )
+    
+    try:
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = config['from_email']
+        msg['To'] = request.recipient
+        msg['Subject'] = "Test Email - IoT Alarm System"
+        
+        body = f"""
+This is a test email from IoT Alarm System.
+
+If you receive this email, your SMTP configuration is working correctly.
+
+Sent by: {current_user.username}
+Time: {datetime.now(timezone.utc).isoformat()}
+
+---
+IoT Alarm System
+        """
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Connect to SMTP server
+        if config['use_tls']:
+            server = smtplib.SMTP(config['host'], config['port'])
+            server.starttls()
+        else:
+            server = smtplib.SMTP(config['host'], config['port'])
+        
+        # Login and send
+        server.login(config['username'], config['password'])
+        server.send_message(msg)
+        server.quit()
+        
+        # Create audit log
+        await create_audit_log(AuditLogCreate(
+            user_id=current_user.id,
+            username=current_user.username,
+            action_type="test_email_sent",
+            target_type="settings",
+            details=f"Test email sent to {request.recipient}"
+        ))
+        
+        return {"message": "Test email sent successfully"}
+        
+    except smtplib.SMTPAuthenticationError:
+        raise HTTPException(
+            status_code=401,
+            detail="SMTP authentication failed. Please check your username and password."
+        )
+    except smtplib.SMTPException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send email: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
+        )
 
 # ==================== ROOT ROUTE ====================
 
