@@ -22,6 +22,9 @@ export default function UserManagement({ user }) {
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
+    full_name: '',
+    email: '',
+    phone: '',
     role: 'operator'
   });
 
@@ -49,7 +52,7 @@ export default function UserManagement({ user }) {
       await axios.post(`${API}/users`, newUser, getAuthHeaders());
       setSuccessMessage('User created successfully');
       setShowCreateModal(false);
-      setNewUser({ username: '', password: '', role: 'operator' });
+      setNewUser({ username: '', password: '', full_name: '', email: '', phone: '', role: 'operator' });
       fetchUsers();
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
@@ -67,18 +70,21 @@ export default function UserManagement({ user }) {
     setError('');
 
     try {
-      // In production, this would call PATCH /api/users/{id}
-      // For now, just update locally and show success
-      const updatedUsers = users.map(u => 
-        u.id === editingUser.id ? editingUser : u
-      );
-      setUsers(updatedUsers);
+      await axios.patch(`${API}/users/${editingUser.id}`, {
+        username: editingUser.username,
+        full_name: editingUser.full_name,
+        email: editingUser.email,
+        phone: editingUser.phone,
+        role: editingUser.role
+      }, getAuthHeaders());
+      
       setSuccessMessage('User updated successfully');
       setShowEditModal(false);
       setEditingUser(null);
+      fetchUsers();
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      setError('Failed to update user');
+      setError(err.response?.data?.detail || 'Failed to update user');
     }
   };
 
@@ -138,23 +144,26 @@ export default function UserManagement({ user }) {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200" data-testid="users-table">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Username
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Role
+                Nama Lengkap
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Created At
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Role
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {users.map((u) => (
               <tr key={u.id} data-testid={`user-row-${u.id}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -164,19 +173,26 @@ export default function UserManagement({ user }) {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    {u.full_name || '-'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    {u.email || '-'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full items-center ${
                       u.role === 'admin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                     }`}
                   >
                     <Shield className="w-3 h-3 mr-1" />
                     {u.role}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                  {format(new Date(u.created_at), 'MMM dd, yyyy HH:mm')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {u.id !== user.id ? (
@@ -228,8 +244,47 @@ export default function UserManagement({ user }) {
                     data-testid="new-username-input"
                     value={newUser.username}
                     onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter username"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    data-testid="new-fullname-input"
+                    value={newUser.full_name}
+                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan nama lengkap"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    data-testid="new-email-input"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Telepon
+                  </label>
+                  <input
+                    type="tel"
+                    data-testid="new-phone-input"
+                    value={newUser.phone}
+                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan nomor telepon"
                   />
                 </div>
                 <div>
@@ -308,6 +363,45 @@ export default function UserManagement({ user }) {
                     value={editingUser.username}
                     onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    data-testid="edit-fullname-input"
+                    value={editingUser.full_name || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan nama lengkap"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    data-testid="edit-email-input"
+                    value={editingUser.email || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Telepon
+                  </label>
+                  <input
+                    type="tel"
+                    data-testid="edit-phone-input"
+                    value={editingUser.phone || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan nomor telepon"
                   />
                 </div>
                 <div>

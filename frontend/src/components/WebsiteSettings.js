@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Palette, Save, RotateCcw, Globe, Sparkles, Moon } from 'lucide-react';
+import { Palette, Save, RotateCcw, Globe, Sparkles, Moon, Upload, Image } from 'lucide-react';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 
 export default function WebsiteSettings({ user }) {
@@ -9,6 +9,7 @@ export default function WebsiteSettings({ user }) {
     siteTitle: 'IoT Alarm System',
     siteDescription: 'Real-time door sensor monitoring and control system',
     siteFavicon: '',
+    siteLogo: '', // Logo URL or base64
     
     // Color Theme
     primaryColor: '#2563eb', // blue-600
@@ -44,6 +45,10 @@ export default function WebsiteSettings({ user }) {
     localStorage.setItem('websiteSettings', JSON.stringify(settings));
     toggleDarkMode(settings.enableDarkMode);
     applyTheme();
+    
+    // Dispatch custom event untuk update logo di sidebar
+    window.dispatchEvent(new Event('websiteSettingsUpdated'));
+    
     setSuccessMessage('Website settings saved successfully');
     setTimeout(() => setSuccessMessage(''), 3000);
   };
@@ -53,6 +58,7 @@ export default function WebsiteSettings({ user }) {
       siteTitle: 'IoT Alarm System',
       siteDescription: 'Real-time door sensor monitoring and control system',
       siteFavicon: '',
+      siteLogo: '',
       primaryColor: '#2563eb',
       secondaryColor: '#10b981',
       accentColor: '#f59e0b',
@@ -85,6 +91,22 @@ export default function WebsiteSettings({ user }) {
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', settings.siteDescription);
+    }
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Ukuran file terlalu besar. Maksimal 2MB');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettings({ ...settings, siteLogo: reader.result });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -184,6 +206,71 @@ export default function WebsiteSettings({ user }) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://example.com/favicon.ico"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Logo Website
+                </label>
+                
+                {/* Logo Preview */}
+                {settings.siteLogo && (
+                  <div className="mb-3 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center">
+                    <img 
+                      src={settings.siteLogo} 
+                      alt="Website Logo" 
+                      className="max-h-20 max-w-full object-contain"
+                    />
+                  </div>
+                )}
+                
+                {/* Upload Button */}
+                <div className="flex items-center space-x-3 mb-3">
+                  <label className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span>Upload Logo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      data-testid="logo-upload-input"
+                    />
+                  </label>
+                  {settings.siteLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, siteLogo: '' })}
+                      className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      Hapus Logo
+                    </button>
+                  )}
+                </div>
+                
+                {/* Or URL Input */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">atau</span>
+                  </div>
+                </div>
+                
+                <div className="mt-3">
+                  <input
+                    type="url"
+                    data-testid="logo-url-input"
+                    value={settings.siteLogo && settings.siteLogo.startsWith('http') ? settings.siteLogo : ''}
+                    onChange={(e) => setSettings({ ...settings, siteLogo: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/logo.png"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Masukkan URL logo atau upload file (maks. 2MB)
+                  </p>
+                </div>
               </div>
             </div>
           </div>

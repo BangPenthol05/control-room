@@ -41,17 +41,33 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     username: str
     password_hash: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     role: str = "operator"  # admin or operator
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
     username: str
     password: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     role: str = "operator"
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    role: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str
     username: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     role: str
     created_at: datetime
 
@@ -541,6 +557,9 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
     user = User(
         username=user_data.username,
         password_hash=get_password_hash(user_data.password),
+        full_name=user_data.full_name,
+        email=user_data.email,
+        phone=user_data.phone,
         role=user_data.role
     )
     doc = user.model_dump()
@@ -558,6 +577,51 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
     ))
     
     return UserResponse(**user.model_dump())
+
+@api_router.patch("/users/{user_id}", response_model=UserResponse)
+async def update_user(user_id: str, user_update: UserUpdate, current_user: User = Depends(get_current_admin_user)):
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Build update dict with only provided fields
+    update_data = {}
+    if user_update.username is not None:
+        # Check if new username already exists (if changed)
+        if user_update.username != user['username']:
+            existing = await db.users.find_one({"username": user_update.username})
+            if existing:
+                raise HTTPException(status_code=400, detail="Username already exists")
+        update_data['username'] = user_update.username
+    
+    if user_update.full_name is not None:
+        update_data['full_name'] = user_update.full_name
+    if user_update.email is not None:
+        update_data['email'] = user_update.email
+    if user_update.phone is not None:
+        update_data['phone'] = user_update.phone
+    if user_update.role is not None:
+        update_data['role'] = user_update.role
+    
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+        
+        # Create audit log
+        await create_audit_log(AuditLogCreate(
+            user_id=current_user.id,
+            username=current_user.username,
+            action_type="user_updated",
+            target_type="user",
+            target_id=user_id,
+            details=f"Updated user: {user['username']}"
+        ))
+    
+    # Get updated user
+    updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    if isinstance(updated_user.get('created_at'), str):
+        updated_user['created_at'] = datetime.fromisoformat(updated_user['created_at'])
+    
+    return UserResponse(**updated_user)
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user: User = Depends(get_current_admin_user)):
