@@ -6,9 +6,17 @@ import { Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const getAuthHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-});
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.error('No authentication token found');
+    window.location.href = '/';
+    return { headers: {} };
+  }
+  return {
+    headers: { Authorization: `Bearer ${token}` }
+  };
+};
 
 export default function SensorManagement({ user }) {
   const [sensors, setSensors] = useState([]);

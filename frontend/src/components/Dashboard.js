@@ -8,13 +8,30 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const getAuthHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-});
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.error('No authentication token found');
+    window.location.href = '/';
+    return { headers: {} };
+  }
+  return {
+    headers: { Authorization: `Bearer ${token}` }
+  };
+};
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function Dashboard({ user }) {
+  // Early return if no user authenticated
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600 dark:text-gray-300">Loading...</div>
+      </div>
+    );
+  }
+
   const [sensors, setSensors] = useState([]);
   const [alarms, setAlarms] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
