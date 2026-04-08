@@ -189,6 +189,9 @@ export default function AuditLogs({ user }) {
                   Timestamp
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -202,7 +205,7 @@ export default function AuditLogs({ user }) {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                     No audit logs found
                   </td>
                 </tr>
@@ -230,12 +233,22 @@ export default function AuditLogs({ user }) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600 dark:text-gray-300">{log.details || '-'}</div>
-                      {log.old_value && log.new_value && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          <span className="font-medium">Changed:</span> {log.old_value} → {log.new_value}
-                        </div>
-                      )}
+                      <div className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-md">
+                        {log.details || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          setSelectedLog(log);
+                          setShowDetailModal(true);
+                        }}
+                        data-testid={`detail-log-button-${log.id}`}
+                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium flex items-center"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Detail
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -249,6 +262,137 @@ export default function AuditLogs({ user }) {
         <FileText className="w-4 h-4 mr-2" />
         Showing {logs.length} log entries
       </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedLog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-testid="audit-log-detail-modal">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                <FileText className="w-6 h-6 mr-2 text-blue-600" />
+                Detail Audit Log
+              </h2>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* User & Action */}
+              <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">User</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white flex items-center">
+                    <User className="w-4 h-4 mr-2 text-gray-400" />
+                    {selectedLog.username || 'System'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Action Type</p>
+                  <span
+                    className={`mt-1 px-3 py-1 inline-flex text-sm font-semibold rounded-full ${getActionColor(
+                      selectedLog.action_type
+                    )}`}
+                  >
+                    {selectedLog.action_type}
+                  </span>
+                </div>
+              </div>
+
+              {/* Target Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Target Type</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedLog.target_type || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Target ID</p>
+                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                    {selectedLog.target_id || '-'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Details</p>
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                    {selectedLog.details || 'No additional details'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Old Value → New Value */}
+              {(selectedLog.old_value || selectedLog.new_value) && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Changes Made</p>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Old Value</p>
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded">
+                        <p className="text-sm text-red-800 dark:text-red-300 font-mono">
+                          {selectedLog.old_value || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-gray-400">
+                      <Activity className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">New Value</p>
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 rounded">
+                        <p className="text-sm text-green-800 dark:text-green-300 font-mono">
+                          {selectedLog.new_value || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Timestamp</p>
+                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                  {format(new Date(selectedLog.timestamp), 'EEEE, dd MMMM yyyy - HH:mm:ss')}
+                </p>
+              </div>
+
+              {/* IDs */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Log ID</p>
+                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded break-all">
+                    {selectedLog.id}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">User ID</p>
+                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded break-all">
+                    {selectedLog.user_id || 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
