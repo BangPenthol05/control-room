@@ -1,18 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun, Bell } from 'lucide-react';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 
 export default function Topbar({ user, onLogout, onToggleSidebar }) {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: 'alarm', title: 'Alarm Triggered', message: 'Sensor Pintu Utama detected motion', time: '2 min ago', read: false },
+    { id: 2, type: 'sensor', title: 'Sensor Offline', message: 'Sensor Kamar Tidur is offline', time: '15 min ago', read: false },
+    { id:  3, type: 'system', title: 'System Change', message: 'User admin updated sensor settings', time: '1 hour ago', read: true },
+  ]);
   const dropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
       }
     };
 
@@ -45,9 +55,102 @@ export default function Topbar({ user, onLogout, onToggleSidebar }) {
             <p className="text-sm text-gray-500 dark:text-gray-400">Real-time monitoring system</p>
           </div>
 
-          {/* Profile Dropdown */}
-          <div className="flex items-center space-x-4">
-            {/* Hamburger Menu Button */}
+          {/* Right Side Actions */}
+          <div className="flex items-center space-x-3">
+            {/* Notifications Bell */}
+            <div className="relative" ref={notificationsRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                data-testid="notifications-button"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                {/* Notification Badge */}
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-xs items-center justify-center font-bold">
+                      {notifications.filter(n => !n.read).length}
+                    </span>
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                      <button
+                        onClick={() => {
+                          setNotifications(notifications.map(n => ({ ...n, read: true })));
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Mark all as read
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                        <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
+                            !notif.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+                          }`}
+                          onClick={() => {
+                            setNotifications(notifications.map(n => 
+                              n.id === notif.id ? { ...n, read: true } : n
+                            ));
+                          }}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
+                              notif.type === 'alarm' ? 'bg-red-500' :
+                              notif.type === 'sensor' ? 'bg-yellow-500' :
+                              'bg-blue-500'
+                            }`}></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{notif.title}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{notif.message}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{notif.time}</p>
+                            </div>
+                            {!notif.read && (
+                              <div className="flex-shrink-0">
+                                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-center">
+                    <button
+                      onClick={() => {
+                        setShowNotifications(false);
+                        navigate('/audit-logs');
+                      }}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      View all activity
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Dark Mode Toggle - Hamburger on Mobile */}
             <button
               onClick={onToggleSidebar}
               className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -57,6 +160,21 @@ export default function Topbar({ user, onLogout, onToggleSidebar }) {
               <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
 
+            {/* Dark Mode Toggle - Desktop Only */}
+            <button
+              onClick={() => toggleDarkMode(!isDarkMode)}
+              className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              data-testid="topbar-dark-mode-toggle"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 text-yellow-500" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              )}
+            </button>
+
+            {/* User Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
