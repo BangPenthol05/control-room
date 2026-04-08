@@ -113,3 +113,49 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+
+/* Phone Input Styling */
+.phone-input-custom .PhoneInputInput {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.phone-input-custom .PhoneInputInput:focus {
+    border-color: #3b82f6;
+    ring: 2px;
+    ring-color: #3b82f6;
+}
+
+.dark .phone-input-custom .PhoneInputInput {
+    background-color: #374151;
+    color: white;
+    border-color: #4b5563;
+}
+
+.dark .phone-input-custom .PhoneInputInput:focus {
+    border-color: #3b82f6;
+}
+
+.phone-input-error .PhoneInputInput {
+    border-color: #ef4444 !important;
+}
+
+.phone-input-custom .PhoneInputCountrySelect {
+    margin-right: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+.dark .phone-input-custom .PhoneInputCountrySelect {
+    background-color: #374151;
+    color: white;
+    border-color: #4b5563;
+}

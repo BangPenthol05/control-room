@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Users, Plus, Trash2, UserCheck, Shield, Edit2 } from 'lucide-react';
+import { Users, Plus, Trash2, UserCheck, Shield, Edit2, Key } from 'lucide-react';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -12,12 +14,20 @@ const getAuthHeaders = () => ({
 
 export default function UserManagement({ user }) {
   const [users, setUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]); // Store all users
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   const [newUser, setNewUser] = useState({
     username: '',
@@ -28,14 +38,47 @@ export default function UserManagement({ user }) {
     role: 'operator'
   });
 
+  const [resetPasswordData, setResetPasswordData] = useState({
+    new_password: '',
+    confirm_password: ''
+  });
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    // Update paginated users when currentPage or itemsPerPage changes
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setUsers(allUsers.slice(startIndex, endIndex));
+  }, [currentPage, itemsPerPage, allUsers]);
+
+  const validateEmail = (email) => {
+    if (!email) return true; // Optional field
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateForm = (userData) => {
+    const errors = {};
+    
+    if (userData.email && !validateEmail(userData.email)) {
+      errors.email = 'Format email tidak valid';
+    }
+    
+    if (userData.phone && !isValidPhoneNumber(userData.phone)) {
+      errors.phone = 'Format nomor telepon tidak valid';
+    }
+    
+    return errors;
+  };
+
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${API}/users`, getAuthHeaders());
-      setUsers(response.data);
+      setAllUsers(response.data);
+      setCurrentPage(1); // Reset to first page
     } catch (err) {
       console.error('Error fetching users:', err);
       setError('Failed to load users');
@@ -47,6 +90,14 @@ export default function UserManagement({ user }) {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError('');
+    setValidationErrors({});
+
+    // Validate form
+    const errors = validateForm(newUser);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
 
     try {
       await axios.post(`${API}/users`, newUser, getAuthHeaders());
@@ -68,6 +119,14 @@ export default function UserManagement({ user }) {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     setError('');
+    setValidationErrors({});
+
+    // Validate form
+    const errors = validateForm(editingUser);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
 
     try {
       await axios.patch(`${API}/users/${editingUser.id}`, {
@@ -85,6 +144,41 @@ export default function UserManagement({ user }) {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to update user');
+    }
+  };
+
+  const handleOpenResetPassword = (userToReset) => {
+    setResetPasswordUser(userToReset);
+    setResetPasswordData({ new_password: '', confirm_password: '' });
+    setShowResetPasswordModal(true);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (resetPasswordData.new_password !== resetPasswordData.confirm_password) {
+      setError('Password tidak cocok');
+      return;
+    }
+
+    if (resetPasswordData.new_password.length < 6) {
+      setError('Password minimal 6 karakter');
+      return;
+    }
+
+    try {
+      await axios.patch(`${API}/users/${resetPasswordUser.id}/reset-password`, {
+        new_password: resetPasswordData.new_password
+      }, getAuthHeaders());
+      
+      setSuccessMessage(`Password untuk ${resetPasswordUser.username} berhasil direset`);
+      setShowResetPasswordModal(false);
+      setResetPasswordUser(null);
+      setResetPasswordData({ new_password: '', confirm_password: '' });
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to reset password');
     }
   };
 
@@ -207,6 +301,15 @@ export default function UserManagement({ user }) {
                       </button>
                       <span className="text-gray-300 dark:text-gray-600">|</span>
                       <button
+                        onClick={() => handleOpenResetPassword(u)}
+                        data-testid={`reset-password-button-${u.id}`}
+                        className="text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 font-medium flex items-center"
+                      >
+                        <Key className="w-4 h-4 mr-1" />
+                        Reset
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <button
                         onClick={() => handleDeleteUser(u.id, u.username)}
                         data-testid={`delete-user-button-${u.id}`}
                         className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 font-medium flex items-center"
@@ -223,6 +326,81 @@ export default function UserManagement({ user }) {
             ))}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, allUsers.length)} - {Math.min(currentPage * itemsPerPage, allUsers.length)} dari {allUsers.length} users
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {/* Items per page selector */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-gray-700 dark:text-gray-300">Per halaman:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            {/* Pagination buttons */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Previous
+              </button>
+              
+              {/* Page numbers */}
+              {Array.from({ length: Math.ceil(allUsers.length / itemsPerPage) }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show first page, last page, current page, and pages around current
+                  const totalPages = Math.ceil(allUsers.length / itemsPerPage);
+                  return page === 1 || 
+                         page === totalPages || 
+                         Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => (
+                  <span key={page} className="flex items-center">
+                    {index > 0 && array[index - 1] !== page - 1 && (
+                      <span className="px-2 text-gray-500">...</span>
+                    )}
+                    <button
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 border rounded text-sm transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  </span>
+                ))}
+              
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= Math.ceil(allUsers.length / itemsPerPage)}
+                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {showCreateModal && (
@@ -270,22 +448,31 @@ export default function UserManagement({ user }) {
                     data-testid="new-email-input"
                     value={newUser.email}
                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border ${validationErrors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Masukkan email"
                   />
+                  {validationErrors.email && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                    Telepon
+                    Telepon (dengan kode negara)
                   </label>
-                  <input
-                    type="tel"
-                    data-testid="new-phone-input"
+                  <PhoneInput
+                    international
+                    defaultCountry="ID"
                     value={newUser.phone}
-                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Masukkan nomor telepon"
+                    onChange={(value) => setNewUser({ ...newUser, phone: value || '' })}
+                    className={`phone-input-custom ${validationErrors.phone ? 'phone-input-error' : ''}`}
+                    data-testid="new-phone-input"
                   />
+                  {validationErrors.phone && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Contoh: +62 812 3456 7890
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -387,22 +574,31 @@ export default function UserManagement({ user }) {
                     data-testid="edit-email-input"
                     value={editingUser.email || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border ${validationErrors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Masukkan email"
                   />
+                  {validationErrors.email && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                    Telepon
+                    Telepon (dengan kode negara)
                   </label>
-                  <input
-                    type="tel"
-                    data-testid="edit-phone-input"
+                  <PhoneInput
+                    international
+                    defaultCountry="ID"
                     value={editingUser.phone || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Masukkan nomor telepon"
+                    onChange={(value) => setEditingUser({ ...editingUser, phone: value || '' })}
+                    className={`phone-input-custom ${validationErrors.phone ? 'phone-input-error' : ''}`}
+                    data-testid="edit-phone-input"
                   />
+                  {validationErrors.phone && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Contoh: +62 812 3456 7890
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -420,7 +616,7 @@ export default function UserManagement({ user }) {
                 </div>
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Note:</strong> Password cannot be changed here. Users must change their own password from their profile.
+                    <strong>Note:</strong> Gunakan tombol "Reset" untuk mengubah password user.
                   </p>
                 </div>
               </div>
@@ -441,6 +637,88 @@ export default function UserManagement({ user }) {
                     setError('');
                   }}
                   data-testid="cancel-edit-user-button"
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {showResetPasswordModal && resetPasswordUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-testid="reset-password-modal">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+              <Key className="w-6 h-6 mr-2" />
+              Reset Password
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Reset password untuk user: <strong>{resetPasswordUser.username}</strong>
+            </p>
+            <form onSubmit={handleResetPassword}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Password Baru
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    data-testid="new-password-input"
+                    value={resetPasswordData.new_password}
+                    onChange={(e) => setResetPasswordData({ ...resetPasswordData, new_password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan password baru"
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Konfirmasi Password Baru
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    data-testid="confirm-password-input"
+                    value={resetPasswordData.confirm_password}
+                    onChange={(e) => setResetPasswordData({ ...resetPasswordData, confirm_password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Konfirmasi password baru"
+                    minLength={6}
+                  />
+                </div>
+                {error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                  </div>
+                )}
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    <strong>Peringatan:</strong> Password minimal 6 karakter.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex space-x-3">
+                <button
+                  type="submit"
+                  data-testid="submit-reset-password-button"
+                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  Reset Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetPasswordModal(false);
+                    setResetPasswordUser(null);
+                    setResetPasswordData({ new_password: '', confirm_password: '' });
+                    setError('');
+                  }}
+                  data-testid="cancel-reset-password-button"
                   className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Cancel

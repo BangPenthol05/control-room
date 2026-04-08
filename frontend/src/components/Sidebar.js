@@ -12,13 +12,16 @@ import {
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Moon,
+  Sun
 } from 'lucide-react';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
-export default function Sidebar({ user, isCollapsed, setIsCollapsed }) {
+export default function Sidebar({ user, isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
   const location = useLocation();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [logo, setLogo] = useState('');
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   useEffect(() => {
     // Load logo from localStorage
@@ -182,18 +185,33 @@ export default function Sidebar({ user, isCollapsed, setIsCollapsed }) {
             </div>
           ))}
         </nav>
+
+        {/* Dark Mode Toggle - Bottom of Sidebar */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-blue-700 bg-blue-900">
+          <button
+            onClick={() => toggleDarkMode(!isDarkMode)}
+            className={`w-full flex items-center space-x-3 px-4 py-4 hover:bg-blue-700/50 transition-colors ${
+              isCollapsed ? 'lg:justify-center' : ''
+            }`}
+            data-testid="sidebar-dark-mode-toggle"
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDarkMode ? (
+              <>
+                <Sun className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+                <span className={`text-sm font-medium ${isCollapsed ? 'lg:hidden' : ''}`}>Light Mode</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-5 h-5 text-blue-200 flex-shrink-0" />
+                <span className={`text-sm font-medium ${isCollapsed ? 'lg:hidden' : ''}`}>Dark Mode</span>
+              </>
+            )}
+          </button>
+        </div>
       </aside>
 
-      {/* Mobile Menu Button */}
-      {!isMobileOpen && (
-        <button
-          onClick={() => setIsMobileOpen(true)}
-          className="fixed bottom-4 right-4 lg:hidden bg-blue-600 text-white p-4 rounded-full shadow-lg z-10 hover:bg-blue-700 transition-colors"
-          data-testid="mobile-menu-button"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      )}
+      {/* Mobile Menu Button - Remove this as hamburger is now in topbar */}
     </>
   );
 }

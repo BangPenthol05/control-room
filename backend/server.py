@@ -7,10 +7,12 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
+from email_validator import validate_email, EmailNotValidError
+import phonenumbers
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 import uuid
 
 ROOT_DIR = Path(__file__).parent
@@ -54,6 +56,30 @@ class UserCreate(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     role: str = "operator"
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v):
+        if v and v.strip():
+            try:
+                validate_email(v)
+                return v
+            except EmailNotValidError:
+                raise ValueError('Format email tidak valid')
+        return v
+    
+    @field_validator('phone')
+    @classmethod
+    def validate_phone_format(cls, v):
+        if v and v.strip():
+            try:
+                parsed = phonenumbers.parse(v, None)
+                if not phonenumbers.is_valid_number(parsed):
+                    raise ValueError('Format nomor telepon tidak valid')
+                return v
+            except Exception:
+                raise ValueError('Format nomor telepon tidak valid')
+        return v
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -61,6 +87,33 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     role: Optional[str] = None
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v):
+        if v and v.strip():
+            try:
+                validate_email(v)
+                return v
+            except EmailNotValidError:
+                raise ValueError('Format email tidak valid')
+        return v
+    
+    @field_validator('phone')
+    @classmethod
+    def validate_phone_format(cls, v):
+        if v and v.strip():
+            try:
+                parsed = phonenumbers.parse(v, None)
+                if not phonenumbers.is_valid_number(parsed):
+                    raise ValueError('Format nomor telepon tidak valid')
+                return v
+            except Exception:
+                raise ValueError('Format nomor telepon tidak valid')
+        return v
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str
 
 class UserResponse(BaseModel):
     id: str
@@ -622,6 +675,38 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
         updated_user['created_at'] = datetime.fromisoformat(updated_user['created_at'])
     
     return UserResponse(**updated_user)
+
+@api_router.patch("/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: str,
+    reset_data: ResetPasswordRequest,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Admin can reset any user's password"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Hash new password
+    new_password_hash = get_password_hash(reset_data.new_password)
+    
+    # Update password
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password_hash": new_password_hash}}
+    )
+    
+    # Create audit log
+    await create_audit_log(AuditLogCreate(
+        user_id=current_user.id,
+        username=current_user.username,
+        action_type="password_reset",
+        target_type="user",
+        target_id=user_id,
+        details=f"Reset password for user: {user['username']}"
+    ))
+    
+    return {"message": "Password reset successfully"}
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user: User = Depends(get_current_admin_user)):

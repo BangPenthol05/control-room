@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Moon, Sun } from 'lucide-react';
-import { useDarkMode } from '@/contexts/DarkModeContext';
+import { Menu } from 'lucide-react';
 
-export default function Topbar({ user, onLogout }) {
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
+export default function Topbar({ user, onLogout, onToggleSidebar }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -47,18 +45,14 @@ export default function Topbar({ user, onLogout }) {
 
           {/* Profile Dropdown */}
           <div className="flex items-center space-x-4">
-            {/* Dark Mode Toggle */}
+            {/* Hamburger Menu Button */}
             <button
-              onClick={() => toggleDarkMode(!isDarkMode)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              data-testid="dark-mode-toggle"
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              onClick={onToggleSidebar}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              data-testid="topbar-hamburger-button"
+              title="Toggle Menu"
             >
-              {isDarkMode ? (
-                <Sun className="w-5 h-5 text-yellow-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              )}
+              <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
 
             <div className="relative" ref={dropdownRef}>
