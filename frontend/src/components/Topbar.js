@@ -2,19 +2,66 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Moon, Sun, Bell } from 'lucide-react';
 import { useDarkMode } from '@/contexts/DarkModeContext';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return { headers: {} };
+  return { headers: { Authorization: `Bearer ${token}` } };
+};
 
 export default function Topbar({ user, onLogout, onToggleSidebar }) {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'alarm', title: 'Alarm Triggered', message: 'Sensor Pintu Utama detected motion', time: '2 min ago', read: false },
-    { id: 2, type: 'sensor', title: 'Sensor Offline', message: 'Sensor Kamar Tidur is offline', time: '15 min ago', read: false },
-    { id:  3, type: 'system', title: 'System Change', message: 'User admin updated sensor settings', time: '1 hour ago', read: true },
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const notificationsRef = useRef(null);
   const navigate = useNavigate();
+
+  // Fetch notifications from backend
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Poll for new notifications every 10 seconds
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const authHeaders = getAuthHeaders();
+      if (!authHeaders.headers.Authorization) return;
+      
+      const response = await axios.get(`${API}/notifications?limit=20`, authHeaders);
+      setNotifications(response.data);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  };
+
+  const markAsRead = async (notifId) => {
+    try {
+      await axios.patch(`${API}/notifications/${notifId}/read`, {}, getAuthHeaders());
+      setNotifications(notifications.map(n => 
+        n.id === notifId ? { ...n, read: true } : n
+      ));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.post(`${API}/notifications/mark-all-read`, {}, getAuthHeaders());
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -79,22 +126,22 @@ export default function Topbar({ user, onLogout, onToggleSidebar }) {
 
               {/* Notifications Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[80vh] md:max-h-[500px] flex flex-col">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
-                      <button
-                        onClick={() => {
-                          setNotifications(notifications.map(n => ({ ...n, read: true })));
-                        }}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Mark all as read
-                      </button>
+                      {notifications.filter(n => !n.read).length > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="overflow-y-auto flex-1">
                     {notifications.length === 0 ? (
                       <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                         <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -107,11 +154,7 @@ export default function Topbar({ user, onLogout, onToggleSidebar }) {
                           className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
                             !notif.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''
                           }`}
-                          onClick={() => {
-                            setNotifications(notifications.map(n => 
-                              n.id === notif.id ? { ...n, read: true } : n
-                            ));
-                          }}
+                          onClick={() => markAsRead(notif.id)}
                         >
                           <div className="flex items-start space-x-3">
                             <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
@@ -121,8 +164,8 @@ export default function Topbar({ user, onLogout, onToggleSidebar }) {
                             }`}></div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 dark:text-white">{notif.title}</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{notif.message}</p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{notif.time}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 break-words">{notif.message}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{notif.time_ago}</p>
                             </div>
                             {!notif.read && (
                               <div className="flex-shrink-0">
@@ -135,7 +178,7 @@ export default function Topbar({ user, onLogout, onToggleSidebar }) {
                     )}
                   </div>
 
-                  <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-center">
+                  <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-center flex-shrink-0">
                     <button
                       onClick={() => {
                         setShowNotifications(false);

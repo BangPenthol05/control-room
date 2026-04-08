@@ -124,6 +124,28 @@ class UserResponse(BaseModel):
     role: str
     created_at: datetime
 
+# ==================== NOTIFICATION SCHEMAS ====================
+
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # alarm, sensor, system
+    title: str
+    message: str
+    related_id: Optional[str] = None  # sensor_id or alarm_id
+    read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NotificationResponse(BaseModel):
+    id: str
+    type: str
+    title: str
+    message: str
+    related_id: Optional[str] = None
+    read: bool
+    created_at: datetime
+    time_ago: str
+
 class UserLogin(BaseModel):
     username: str
     password: str
@@ -259,6 +281,44 @@ async def create_audit_log(log_data: AuditLogCreate):
     doc = log_obj.model_dump()
     doc['timestamp'] = doc['timestamp'].isoformat()
     await db.audit_logs.insert_one(doc)
+
+# ==================== NOTIFICATION HELPERS ====================
+
+def get_time_ago(dt: datetime) -> str:
+    """Convert datetime to human-readable time ago string"""
+    now = datetime.now(timezone.utc)
+    if isinstance(dt, str):
+        dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    diff = now - dt
+    seconds = diff.total_seconds()
+    
+    if seconds < 60:
+        return "Just now"
+    elif seconds < 3600:
+        minutes = int(seconds / 60)
+        return f"{minutes} min ago" if minutes > 1 else "1 min ago"
+    elif seconds < 86400:
+        hours = int(seconds / 3600)
+        return f"{hours} hour ago" if hours == 1 else f"{hours} hours ago"
+    else:
+        days = int(seconds / 86400)
+        return f"{days} day ago" if days == 1 else f"{days} days ago"
+
+async def create_notification(notif_type: str, title: str, message: str, related_id: Optional[str] = None):
+    """Create a notification in database"""
+    notif = Notification(
+        type=notif_type,
+        title=title,
+        message=message,
+        related_id=related_id
+    )
+    doc = notif.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.notifications.insert_one(doc)
+    return notif
 
 # ==================== INITIALIZE DEFAULT DATA ====================
 
@@ -418,6 +478,22 @@ async def update_sensor(sensor_id: str, sensor_update: SensorUpdate, current_use
             new_value=", ".join(new_values),
             details=f"Updated sensor: {sensor['name']}"
         ))
+        
+        # Create notification for important sensor changes
+        if 'status' in update_data and update_data['status'] == 'offline':
+            await create_notification(
+                notif_type="sensor",
+                title="⚠️ Sensor Offline",
+                message=f"Sensor {sensor['name']} at {sensor['location']} is offline",
+                related_id=sensor_id
+            )
+        elif 'is_enabled' in update_data and not update_data['is_enabled']:
+            await create_notification(
+                notif_type="system",
+                title="ℹ️ Sensor Disabled",
+                message=f"Sensor {sensor['name']} has been disabled by {current_user.username}",
+                related_id=sensor_id
+            )
     
     await db.sensors.update_one({"id": sensor_id}, {"$set": update_data})
     
@@ -522,6 +598,14 @@ async def create_alarm(alarm_data: AlarmEventCreate):
         details=f"Alarm triggered for sensor: {alarm_data.sensor_name} at {alarm_data.sensor_location}"
     ))
     
+    # Create notification
+    await create_notification(
+        notif_type="alarm",
+        title="🚨 Alarm Triggered",
+        message=f"Sensor {alarm_data.sensor_name} at {alarm_data.sensor_location} detected motion",
+        related_id=alarm.id
+    )
+    
     return alarm
 
 @api_router.patch("/alarms/{alarm_id}/resolve", response_model=AlarmEvent)
@@ -587,6 +671,58 @@ async def get_audit_logs(
             log['timestamp'] = datetime.fromisoformat(log['timestamp'])
     
     return logs
+
+# ==================== NOTIFICATION ROUTES ====================
+
+@api_router.get("/notifications", response_model=List[NotificationResponse])
+async def get_notifications(
+    unread_only: bool = False,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get notifications for current user"""
+    query = {}
+    if unread_only:
+        query["read"] = False
+    
+    notifications = await db.notifications.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Convert to response format with time_ago
+    result = []
+    for notif in notifications:
+        if isinstance(notif.get('created_at'), str):
+            created_at = datetime.fromisoformat(notif['created_at'])
+        else:
+            created_at = notif['created_at']
+        
+        result.append(NotificationResponse(
+            **notif,
+            created_at=created_at,
+            time_ago=get_time_ago(created_at)
+        ))
+    
+    return result
+
+@api_router.patch("/notifications/{notif_id}/read")
+async def mark_notification_read(
+    notif_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Mark a notification as read"""
+    await db.notifications.update_one(
+        {"id": notif_id},
+        {"$set": {"read": True}}
+    )
+    return {"message": "Notification marked as read"}
+
+@api_router.post("/notifications/mark-all-read")
+async def mark_all_notifications_read(current_user: User = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": "All notifications marked as read"}
 
 # ==================== USER MANAGEMENT ROUTES ====================
 
