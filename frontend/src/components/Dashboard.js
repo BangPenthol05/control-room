@@ -23,15 +23,6 @@ const getAuthHeaders = () => {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function Dashboard({ user }) {
-  // Early return if no user authenticated
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600 dark:text-gray-300">Loading...</div>
-      </div>
-    );
-  }
-
   const [sensors, setSensors] = useState([]);
   const [alarms, setAlarms] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
@@ -84,6 +75,15 @@ export default function Dashboard({ user }) {
 
     return () => clearInterval(interval);
   }, [fetchSensors, fetchAlarms, fetchAuditLogs]);
+
+  // Early return AFTER all hooks to comply with Rules of Hooks
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600 dark:text-gray-300">Loading...</div>
+      </div>
+    );
+  }
 
   const updateSensor = async (sensorId, updateData) => {
     try {
