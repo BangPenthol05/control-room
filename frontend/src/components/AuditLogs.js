@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { FileText, Filter, User, Activity, Download } from 'lucide-react';
+import { FileText, Filter, User, Activity, Download, Eye, X } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,6 +15,8 @@ export default function AuditLogs({ user }) {
   const [filterAction, setFilterAction] = useState('');
   const [filterUsername, setFilterUsername] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   useEffect(() => {
     fetchLogs();

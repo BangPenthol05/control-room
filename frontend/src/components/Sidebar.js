@@ -186,25 +186,23 @@ export default function Sidebar({ user, isCollapsed, setIsCollapsed, isMobileOpe
           ))}
         </nav>
 
-        {/* Dark Mode Toggle - Bottom of Sidebar */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-blue-700 bg-blue-900">
+        {/* Dark Mode Toggle - Mobile/Tablet Only - Bottom of Sidebar */}
+        <div className="lg:hidden absolute bottom-0 left-0 right-0 border-t border-blue-700 bg-blue-900">
           <button
             onClick={() => toggleDarkMode(!isDarkMode)}
-            className={`w-full flex items-center space-x-3 px-4 py-4 hover:bg-blue-700/50 transition-colors ${
-              isCollapsed ? 'lg:justify-center' : ''
-            }`}
+            className="w-full flex items-center space-x-3 px-4 py-4 hover:bg-blue-700/50 transition-colors"
             data-testid="sidebar-dark-mode-toggle"
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {isDarkMode ? (
               <>
                 <Sun className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                <span className={`text-sm font-medium ${isCollapsed ? 'lg:hidden' : ''}`}>Light Mode</span>
+                <span className="text-sm font-medium">Light Mode</span>
               </>
             ) : (
               <>
                 <Moon className="w-5 h-5 text-blue-200 flex-shrink-0" />
-                <span className={`text-sm font-medium ${isCollapsed ? 'lg:hidden' : ''}`}>Dark Mode</span>
+                <span className="text-sm font-medium">Dark Mode</span>
               </>
             )}
           </button>

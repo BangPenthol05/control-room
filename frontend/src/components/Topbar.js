@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, Moon, Sun } from 'lucide-react';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
 export default function Topbar({ user, onLogout, onToggleSidebar }) {
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();

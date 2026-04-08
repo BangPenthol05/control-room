@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Bell, Filter, CheckCircle, Clock, Download } from 'lucide-react';
+import { Bell, Filter, CheckCircle, Clock, Download, Eye, X } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -14,6 +14,8 @@ export default function AlarmHistory({ user }) {
   const [alarms, setAlarms] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedAlarm, setSelectedAlarm] = useState(null);
 
   useEffect(() => {
     fetchAlarms();
@@ -248,18 +250,32 @@ export default function AlarmHistory({ user }) {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {alarm.status === 'active' ? (
+                      <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => resolveAlarm(alarm.id)}
-                          data-testid={`resolve-alarm-button-${alarm.id}`}
-                          className="text-blue-600 hover:text-blue-900 font-medium flex items-center"
+                          onClick={() => {
+                            setSelectedAlarm(alarm);
+                            setShowDetailModal(true);
+                          }}
+                          data-testid={`detail-alarm-button-${alarm.id}`}
+                          className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium flex items-center"
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Resolve
+                          <Eye className="w-4 h-4 mr-1" />
+                          Detail
                         </button>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
+                        {alarm.status === 'active' && (
+                          <>
+                            <span className="text-gray-300">|</span>
+                            <button
+                              onClick={() => resolveAlarm(alarm.id)}
+                              data-testid={`resolve-alarm-button-${alarm.id}`}
+                              className="text-blue-600 hover:text-blue-900 font-medium flex items-center"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Resolve
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -268,6 +284,124 @@ export default function AlarmHistory({ user }) {
           </table>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedAlarm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-testid="alarm-detail-modal">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                <Bell className="w-6 h-6 mr-2 text-red-600" />
+                Detail Alarm
+              </h2>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Status Badge */}
+              <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
+                <span
+                  className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${
+                    selectedAlarm.status === 'active'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  }`}
+                >
+                  {selectedAlarm.status === 'active' ? 'Active' : 'Resolved'}
+                </span>
+              </div>
+
+              {/* Sensor Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Nama Sensor</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">{selectedAlarm.sensor_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Lokasi</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">{selectedAlarm.sensor_location}</p>
+                </div>
+              </div>
+
+              {/* Timing Information */}
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Waktu Triggered</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                    {format(new Date(selectedAlarm.triggered_at), 'EEEE, dd MMMM yyyy - HH:mm:ss')}
+                  </p>
+                </div>
+
+                {selectedAlarm.ended_at && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Waktu Resolved</p>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white flex items-center">
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                      {format(new Date(selectedAlarm.ended_at), 'EEEE, dd MMMM yyyy - HH:mm:ss')}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Durasi</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedAlarm.status === 'active' ? (
+                      <span className="text-red-600 animate-pulse">Masih Berlangsung</span>
+                    ) : (
+                      formatDuration(selectedAlarm.duration)
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* IDs */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Alarm ID</p>
+                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                    {selectedAlarm.id}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Sensor ID</p>
+                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                    {selectedAlarm.sensor_id}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex justify-end space-x-3">
+              {selectedAlarm.status === 'active' && (
+                <button
+                  onClick={() => {
+                    resolveAlarm(selectedAlarm.id);
+                    setShowDetailModal(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Resolve Alarm
+                </button>
+              )}
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
