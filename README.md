@@ -1,6 +1,6 @@
 # 🚨 IoT Alarm System Dashboard
 
-Dashboard monitoring dan kontrol untuk 13 sensor pintu dengan sistem alarm real-time. Dirancang untuk PT. Ching Luh sebagai pengganti platform Blynk.
+Dashboard monitoring dan kontrol untuk 13 sensor pintu dengan sistem alarm real-time. Dirancang sebagai pengganti platform Blynk.
 
 ## 📋 Fitur Utama
 
@@ -250,7 +250,7 @@ Untuk pertanyaan atau issue, hubungi tim development atau buka ticket di issue t
 
 ## 📄 License
 
-Proprietary - PT. Ching Luh Internal Use Only
+Proprietary - Internal Use Only
 
 ---
 
